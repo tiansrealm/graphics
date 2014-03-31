@@ -104,15 +104,34 @@ def main(argv=sys.argv):
 			#rendering============================================
 			elif command == "render-parallel":
 				renderParallel()
+			elif command == "render-perspective-cyclops":
+				if len(args) != 3:
+					print "require 3 float argument (Ex,Ey,Ez) for one eye perspective."
+				else:
+					renderCyclops(float(args[0]),float(args[1]),float(args[2]))
 			else:
 				print "unregonized command:", command
 			command = None
 def renderParallel():
-	global rgbArray, edgeMat
 	m = edgeMat.matrix
-	xyCoors = [i[:-2]+j[:-2] for i,j in zip(m[::2],m[1::2])]
+	#pairs every two row as start and end of a line
+	renderParallelAux(m)
+def renderParallelAux(m):
+	#m must be a matrix of an edgematrix
+	#pairs every two row as start and end of a line
+	xyCoors = [r1[:-2]+r2[:-2] for r1,r2 in zip(m[::2],m[1::2])]
 	for line in xyCoors:
 		pasteLine(*line)
+def renderCyclops(ex,ey,ez):
+	#one perspective line. requires x,y,z for the one eye
+	m = list(edgeMat.matrix) #clone so won't change the original
+	for point in m:
+		x,y,z = point[0], point[1], point[2]
+		point[0] = -ez*(x-ex)/(z-ez) + ex
+		point[1] = -ez*(y-ey)/(z-ez) + ey
+		#xNew = -ez(x-ex)/(z-ez) + ex
+		#yNew = -ez(y-ey)/(z-ez) + ey
+	renderParallelAux(m)
 #given args could be float or convertable to desired floats
 def pasteLine(x1,y1,x2,y2):
 	global color, rgbArray

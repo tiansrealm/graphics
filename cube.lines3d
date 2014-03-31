@@ -25,6 +25,6 @@ rotate-x 10
 rotate-z 10
 rotate-y 30
 transform
-render-parallel
+render-perspective-cyclops  0 0 3
 file cube.ppm
 end

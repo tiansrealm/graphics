@@ -31,7 +31,7 @@ class Matrix(object):
 			"invalid matrix dimension for multiplication {} x {}".format(self.col, other.row)
 		ans = Matrix(self.row, other.col)
 
-		reversedOther = zip(*other.matrix)
+		reversedOther = map(list, zip(*other.matrix))
 		for row in range(self.row): 
 			for r2 in range(other.col): #col of other = row of reversedOther
 				s = 0;
@@ -40,7 +40,7 @@ class Matrix(object):
 				ans.set(row,r2, s)
 		return ans
 	def reverse(self):
-		self.matrix = zip(*self.matrix)
+		self.matrix = map(list, zip(*self.matrix))
 		self.row, self.col = self.col, self.row
 		return self
 	def __str__(self):
