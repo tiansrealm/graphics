@@ -17,14 +17,21 @@ class Matrix(object):
 			return self.matrix[row][col]
 		else:
 			print "warning: attepmt to get a out of bound value in a Matrix"
+	def identity(self):
+		if(self.row != self.col):
+			print "not a square matrix for identity()"
+		else:
+			for i in range(self.row):
+				self.set(i,i,1)	
 	def mult(self, other):
 		'''self(matrix) is multiplied by other and result is new matrix
 			the order is :   self.matrix * other
 		'''
-		assert(other.row == self.col), "invalid matrix dimension for multiplication"
+		assert(self.col == other.row), \
+			"invalid matrix dimension for multiplication {} x {}".format(self.col, other.row)
 		ans = Matrix(self.row, other.col)
 
-		reversedOther = zip(*other.matrix) 
+		reversedOther = zip(*other.matrix)
 		for row in range(self.row): 
 			for r2 in range(other.col): #col of other = row of reversedOther
 				s = 0;
@@ -32,7 +39,15 @@ class Matrix(object):
 					s += self.matrix[row][col] * reversedOther[r2][col] 
 				ans.set(row,r2, s)
 		return ans
-
+	def reverse(self):
+		self.matrix = zip(*self.matrix)
+		self.row, self.col = self.col, self.row
+		return self
+	def __str__(self):
+		s = ""
+		for row in self.matrix:
+			s += str(row) + "\n"
+		return s
 	#note: zip(*matrix) returns same matrix with rows and cols swapped
 	'''
 	[ [1, 2, 3],		[ [1, 4, 7],
@@ -47,15 +62,20 @@ class EdgeMatrix(Matrix):
 	Each row is 3 coordinates x,y,z of a point
 	Every two rows is coupled to form a line. a.k.a edge
 	Starts with zero rows. 
+
+
 	"""
-	def __init__(self):
-		super(EdgeMatrix, self).__init__(0, 4)
-	
+	def __init__(self, Mat = None):
+		if Mat:
+			self.matrix = Mat.matrix
+			self.row = Mat.row
+			self.col = Mat.col
+		else:
+			super(EdgeMatrix, self).__init__(0, 4)
 	def addLine(self,x1,y1,z1,x2,y2,z2):
 		self.matrix.append([x1,y1,z1,1])
 		self.matrix.append([x2,y2,z2,1])
 		self.row += 2
-
 class TransMatrix(Matrix):
 	"""
 	4 by 4 matrix used to transformation another
@@ -65,6 +85,4 @@ class TransMatrix(Matrix):
 		super(TransMatrix, self).__init__(4, 4)	
 		self.identity()
 
-	def identity(self):
-		for i in range(self.row):
-			self.set(i,i,1)		
+		
