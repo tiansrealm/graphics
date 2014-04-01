@@ -1,4 +1,4 @@
-# cube  (same, but render-perspective-cyclops)
+# cube  (same, but render-perspective-stereo)
 screen -2 -2 2 2
 pixels 500 500
 identity
@@ -25,6 +25,6 @@ rotate-x 10
 rotate-z 10
 rotate-y 30
 transform
-render-perspective-cyclops  0 0 3
-file cube1.ppm
+render-perspective-stereo  -1.25 0 5 1.25 0 5
+file cube2.ppm
 end

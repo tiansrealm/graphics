@@ -3,6 +3,9 @@ from matrix import *
 
 rgbArray = [[[0]*3 for row in range(500)] for column in range(500)]
 color = [255,255,255]
+WHITE = [255,255,255]
+RED = [255,0,0]
+CYAN = [0,127,127]
 pixelWorldSize = (500,500) #width, height
 screen = (-5,-5, 5,5,) #xleft  ybottom  xright  ytop: cartesiancoordinates
 edgeMat = EdgeMatrix()
@@ -109,29 +112,48 @@ def main(argv=sys.argv):
 					print "require 3 float argument (Ex,Ey,Ez) for one eye perspective."
 				else:
 					renderCyclops(float(args[0]),float(args[1]),float(args[2]))
+			elif command == "render-perspective-stereo":
+				if len(args) != 6:
+					print "require 6 float argument (x,y,z) for each eye."
+				else:
+					renderStereo(*map(float, args))
 			else:
 				print "unregonized command:", command
 			command = None
 def renderParallel():
+	global color
+	color = WHITE
 	m = edgeMat.matrix
-	#pairs every two row as start and end of a line
-	renderParallelAux(m)
-def renderParallelAux(m):
-	#m must be a matrix of an edgematrix
-	#pairs every two row as start and end of a line
 	xyCoors = [r1[:-2]+r2[:-2] for r1,r2 in zip(m[::2],m[1::2])]
 	for line in xyCoors:
 		pasteLine(*line)
-def renderCyclops(ex,ey,ez):
+def renderCyclops(ex,ey,ez, c = WHITE):
 	#one perspective line. requires x,y,z for the one eye
-	m = list(edgeMat.matrix) #clone so won't change the original
+	global color
+	color = c
+	m = edgeMat.matrix
+	p1, p2 = None, None
 	for point in m:
 		x,y,z = point[0], point[1], point[2]
-		point[0] = -ez*(x-ex)/(z-ez) + ex
-		point[1] = -ez*(y-ey)/(z-ez) + ey
+		xNew = -ez*(x-ex)/(z-ez) + ex
+		yNew = -ez*(y-ey)/(z-ez) + ey
+		if (p1 == None):
+			p1 = [xNew,yNew]
+		elif(p2 == None):
+			p2 = [xNew,yNew]
+			pasteLine(*(p1+p2))
+			p1 = p2 = None
+		else:
+			print "error in renderCyclops"
+			return
 		#xNew = -ez(x-ex)/(z-ez) + ex
 		#yNew = -ez(y-ey)/(z-ez) + ey
-	renderParallelAux(m)
+def renderStereo(lx,ly,lz,rx,ry,rz):
+	#two perspective lines. Left and right eye coords required
+	#uses red for left eye cyan for right for 3-d efffect
+	renderCyclops(lx,ly,lz,RED)
+	renderCyclops(rx,ry,rz,CYAN)
+
 #given args could be float or convertable to desired floats
 def pasteLine(x1,y1,x2,y2):
 	global color, rgbArray
