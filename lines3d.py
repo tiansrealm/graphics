@@ -2,10 +2,10 @@ import sys, math
 from matrix import *
 
 rgbArray = [[[0]*3 for row in range(500)] for column in range(500)]
-color = [255,255,255]
-WHITE = [255,255,255]
-RED = [255,0,0]
-CYAN = [0,127,127]
+color = (255,255,255)
+WHITE = (255,255,255)
+RED =   (255,0,0)
+CYAN =  (0,127,127)
 pixelWorldSize = (500,500) #width, height
 screen = (-5,-5, 5,5,) #xleft  ybottom  xright  ytop: cartesiancoordinates
 edgeMat = EdgeMatrix()
@@ -47,7 +47,8 @@ def main(argv=sys.argv):
 						print "Given destination file is", destination[-4:]
 						break 
 					fWrite = open(destination, "w")
-					fWrite.write ("P3\n{} {}\n255\n".format(*pixelWorldSize)) #file type, width, height, max color value
+					#file type, width, height, max color value
+					fWrite.write ("P3\n{} {}\n255\n".format(*pixelWorldSize)) 
 					s = " ".join(str(rgb) for y in rgbArray for x in y for rgb in x)
 					fWrite.write(s)
 					fWrite.write(" ")
@@ -86,7 +87,7 @@ def main(argv=sys.argv):
 						print "unregonized rotate command:", command
 						return
 					transMat = tempMat.mult(transMat)
-					#print "trans",transMat.matrix
+					#print "trans",transMat.mat
 			elif command == "move":
 				if len(args) != 3:
 					print "require 3 float argument (x,y,z) for translation."
@@ -101,7 +102,7 @@ def main(argv=sys.argv):
 			elif command == "transform":
 				pass
 				#print "EDGE:\n", edgeMat
-				#print "trans",transMat.matrix
+				#print "trans",transMat.mat
 				edgeMat = EdgeMatrix(transMat.mult(edgeMat.reverse()).reverse())
 				#print "trans:\n", transMat, "edge:\n" ,edgeMat
 			#rendering============================================
@@ -123,7 +124,7 @@ def main(argv=sys.argv):
 def renderParallel():
 	global color
 	color = WHITE
-	m = edgeMat.matrix
+	m = edgeMat.mat
 	xyCoors = [r1[:-2]+r2[:-2] for r1,r2 in zip(m[::2],m[1::2])]
 	for line in xyCoors:
 		pasteLine(*line)
@@ -131,7 +132,7 @@ def renderCyclops(ex,ey,ez, c = WHITE):
 	#one perspective line. requires x,y,z for the one eye
 	global color
 	color = c
-	m = edgeMat.matrix
+	m = edgeMat.mat
 	p1, p2 = None, None
 	for point in m:
 		x,y,z = point[0], point[1], point[2]
@@ -178,7 +179,6 @@ def pasteLine(x1,y1,x2,y2):
 			print "Point coordinate out of range of 0-499"
 			return
 	if(p1 == p2):
-		print("notice: a line with endpoints same points")
 		return
 	if deltaX < deltaY: # shorter x difference
 		#swap x and y to force x as the longer difference
@@ -195,9 +195,16 @@ def pasteLine(x1,y1,x2,y2):
 	while(x <= p2[0]):
 		col,row = int(x),int(y)
 		if reversedXY:
-			rgbArray[col][row] = color 
+			#cyan and red 3-d cancellation
+			if is_cyanRedOverlap(rgbArray[col][row], color):
+				rgbArray[col][row] = WHITE
+			else:
+				rgbArray[col][row] = color 
 		else:
-			rgbArray[row][col] = color
+			if is_cyanRedOverlap(rgbArray[row][col], color):
+				rgbArray[row][col] = WHITE
+			else: 
+				rgbArray[row][col] = color
 		#increment
 		x += 1
 		counter += deltaY
@@ -208,8 +215,9 @@ def pasteLine(x1,y1,x2,y2):
 				y -= 1
 			counter -= deltaX
 
-		
-	
+def is_cyanRedOverlap(color1, color2):
+	return (color1 == CYAN and color2 == RED) \
+				or (color1 == RED and color2 == CYAN)
 
 
 
@@ -226,3 +234,41 @@ def check(argv):
 
 if __name__ == "__main__":
 	main()
+
+
+
+#---------------SHAPES CLASSES---------------------
+#Uses Natrices
+def MatrixShape(Object):
+	def __init__(self):
+		raise NotImplementedError
+def Sphere(MatrixShape):
+	def __init__(r, cx, cy, cz, angleStep = 10): # radius and center coords
+		#first make unit sphere 
+		if (angleStep < 0 or angleStep >= 45):
+			print "please choose and angleStep that is 0 < angle <= 45"
+			return
+		self.matrix = EdgeMatrix()
+		theta = phi = 0
+
+		horizontal = []
+		for(phi; phi < 360; phi += angleStep):
+			vertical = []
+			for(theta; theta <= 180; theta += angleStep):
+				radTheta = math.radians(theta)
+				radPhi = math.radians(Phi)
+				x = r * math.sin(radPhi) * math.cos(radTheta)
+				y = r * math.sin(radPhi) * math.sin(radTheta)
+				z = r * math.cos(radPhi) 
+				vertical.append([x,y,z])
+				if not theta == 0:
+					i = theta / angleStep
+					self.matrix.addLine(*(vertical[i-1]+vertical[1]))
+
+			horizontal.append(vertical)
+			
+		for(i = 0; i < len(horizontal); i++):
+			for(j = 1; j < (len(horizontal[0]) - 1); j++):
+				p1 = horizontal[i][j]
+				p2 = [(i+1)%len(horizontal)][j]
+				self.matrix.addLine(*(p1.extend(p2)))
