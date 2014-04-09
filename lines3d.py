@@ -1,7 +1,7 @@
 import sys, math
 from matrix import *
 
-rgbArray = [[[0]*3 for row in range(500)] for column in range(500)]
+rgbArray = None
 color = (255,255,255)
 WHITE = (255,255,255)
 RED =   (255,0,0)
@@ -10,7 +10,7 @@ pixelWorldSize = (500,500) #width, height
 screen = (-5,-5, 5,5,) #xleft  ybottom  xright  ytop: cartesiancoordinates
 edgeMat = EdgeMatrix()
 transMat = TransMatrix()
-
+shapes = [edgeMat]
 def main(argv=sys.argv):
 	global color, rgbArray, screen, pixelWorldSize, transMat, edgeMat
 	check(argv)
@@ -32,6 +32,8 @@ def main(argv=sys.argv):
 					print "require 2 int argument for width and height"
 				else:
 					pixelWorldSize = int(args[0]), int(args[1])
+					rgbArray = [[[0]*3 for row in range(pixelWorldSize[0])] \
+									   for column in range(pixelWorldSize[1])]
 			elif command == "screen":
 				if len(args) != 4:
 					print "require 4 int argument for screen. xleft  ybottom  xright  ytop"
@@ -54,6 +56,12 @@ def main(argv=sys.argv):
 					fWrite.write(" ")
 			elif command == "end":
 				return
+			#shapes
+			elif command == "sphere":
+				if len(args) != 4:
+					print "require 4 floats: radius, and x, y, z coordinates"
+				else:
+					sphere(*[float(x) for x in args])
 			#transforming===============================================
 			elif command == "line":
 				if len(args) != 6:
@@ -65,38 +73,26 @@ def main(argv=sys.argv):
 				if len(args) != 1:
 					print "require 1 int argument (degrees) for rotation degree"
 				else:
-					tempMat = TransMatrix()
-					rad = math.radians(int(args[0]))
-					cos, sin = math.cos(rad), math.sin(rad)
+					angle = int(args[0])					
 					if command == "rotate-x":
-						tempMat.set(1,1, cos)
-						tempMat.set(1,2, -sin)
-						tempMat.set(2,1, sin)
-						tempMat.set(2,2, cos)
+						rotateX(angle)
 					elif command == "rotate-y":
-						tempMat.set(0,0, cos)
-						tempMat.set(0,2, sin)
-						tempMat.set(2,0, -sin)
-						tempMat.set(2,2, cos)
+						rotateY(angle)
 					elif command == "rotate-z":
-						tempMat.set(0,0, cos)
-						tempMat.set(0,1, -sin)
-						tempMat.set(1,0, sin)
-						tempMat.set(1,1, cos)
+						rotateZ(angle)
 					else: 
 						print "unregonized rotate command:", command
 						return
-					transMat = tempMat.mult(transMat)
-					#print "trans",transMat.mat
+			elif command == "scale":
+				if len(args) != 3:
+					print "require 3 float argument (x,y,z) for scaling."
+				else:
+					scale(float(args[0]),float(args[1]),float(args[2]))
 			elif command == "move":
 				if len(args) != 3:
 					print "require 3 float argument (x,y,z) for translation."
 				else:
-					tempMat = TransMatrix()
-					tempMat.set(0,3, float(args[0]))
-					tempMat.set(1,3, float(args[1]))
-					tempMat.set(2,3, float(args[2]))
-					transMat = tempMat.mult(transMat)
+					move(float(args[0]),float(args[1]),float(args[2]))
 			elif command == "identity":
 				transMat.identity()
 			elif command == "transform":
@@ -121,6 +117,52 @@ def main(argv=sys.argv):
 			else:
 				print "unregonized command:", command
 			command = None
+def move(x,y,z):
+	global transMat
+	tempMat = TransMatrix()
+	tempMat.set(0,3, x)
+	tempMat.set(1,3, y)
+	tempMat.set(2,3, z)
+	transMat = tempMat.mult(transMat)
+def scale(x,y,z):
+	global transMat
+	tempMat = TransMatrix()
+	tempMat.set(0,0, x)
+	tempMat.set(1,1, y)
+	tempMat.set(2,2, z)
+	transMat = tempMat.mult(transMat)
+def rotateX(angle):
+	global transMat
+	tempMat = TransMatrix()
+	rad = math.radians(angle)
+	cos, sin = math.cos(rad), math.sin(rad)
+	tempMat.set(1,1, cos)
+	tempMat.set(1,2, -sin)
+	tempMat.set(2,1, sin)
+	tempMat.set(2,2, cos)
+	transMat = tempMat.mult(transMat)
+
+def rotateY(angle):
+	global transMat
+	tempMat = TransMatrix()
+	rad = math.radians(angle)
+	cos, sin = math.cos(rad), math.sin(rad)
+	tempMat.set(0,0, cos)
+	tempMat.set(0,2, sin)
+	tempMat.set(2,0, -sin)
+	tempMat.set(2,2, cos)
+	transMat = tempMat.mult(transMat)
+def rotateZ(angle):	
+	global transMat
+	tempMat = TransMatrix()
+	rad = math.radians(angle)
+	cos, sin = math.cos(rad), math.sin(rad)
+	tempMat.set(0,0, cos)
+	tempMat.set(0,1, -sin)
+	tempMat.set(1,0, sin)
+	tempMat.set(1,1, cos)
+	transMat = tempMat.mult(transMat)
+
 def renderParallel():
 	global color
 	color = WHITE
@@ -232,43 +274,46 @@ def check(argv):
 		print "require a filename.lines3d as the argument"
 
 
+
+#---------------SHAPES---------------------
+def sphere(r, cx, cy, cz, angleStep = 10): # radius and center coords
+	#first make unit sphere 
+	if (angleStep < 0 or angleStep > 45):
+		print "please choose and angleStep that is 0 < angle <= 45"
+		return
+	horizontal = []
+	#drawing vertical lines
+	for i in range(360 / angleStep):
+		theta = i * angleStep
+		vertical = []
+		for j in range(180/angleStep+1):
+			phi = j * angleStep
+			radTheta = math.radians(theta)
+			radPhi = math.radians(phi)
+			x = r * math.sin(radPhi) * math.cos(radTheta)
+			y = r * math.sin(radPhi) * math.sin(radTheta)
+			z = r * math.cos(radPhi) 
+			vertical.append([x,y,z])
+			if not phi == 0:
+				a = vertical[j-1]+vertical[j]
+				if len(a) != 6:
+					print "error", a
+				edgeMat.addLine(*(vertical[j-1]+vertical[j]))
+			j+=1
+		horizontal.append(vertical)
+		i+=1
+	#drawing horizontal lines
+	for i in range(len(horizontal)):
+		for j in range(1,len(horizontal[0])-1):
+			p1 = horizontal[i][j]
+			p2 = horizontal[(i+1)%len(horizontal)][j]
+			edgeMat.addLine(*(p1+p2))
+			j+=1
+		i+=1
+
+
+
+
+
 if __name__ == "__main__":
 	main()
-
-
-
-#---------------SHAPES CLASSES---------------------
-#Uses Natrices
-def MatrixShape(Object):
-	def __init__(self):
-		raise NotImplementedError
-def Sphere(MatrixShape):
-	def __init__(r, cx, cy, cz, angleStep = 10): # radius and center coords
-		#first make unit sphere 
-		if (angleStep < 0 or angleStep >= 45):
-			print "please choose and angleStep that is 0 < angle <= 45"
-			return
-		self.matrix = EdgeMatrix()
-		theta = phi = 0
-
-		horizontal = []
-		for(phi; phi < 360; phi += angleStep):
-			vertical = []
-			for(theta; theta <= 180; theta += angleStep):
-				radTheta = math.radians(theta)
-				radPhi = math.radians(Phi)
-				x = r * math.sin(radPhi) * math.cos(radTheta)
-				y = r * math.sin(radPhi) * math.sin(radTheta)
-				z = r * math.cos(radPhi) 
-				vertical.append([x,y,z])
-				if not theta == 0:
-					i = theta / angleStep
-					self.matrix.addLine(*(vertical[i-1]+vertical[1]))
-
-			horizontal.append(vertical)
-			
-		for(i = 0; i < len(horizontal); i++):
-			for(j = 1; j < (len(horizontal[0]) - 1); j++):
-				p1 = horizontal[i][j]
-				p2 = [(i+1)%len(horizontal)][j]
-				self.matrix.addLine(*(p1.extend(p2)))

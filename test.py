@@ -1,2 +1,2 @@
 x = "fa"
-print x[4]
+print range(5)

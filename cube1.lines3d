@@ -1,4 +1,4 @@
-# cube (render-parallel)
+# cube  (same, but render-perspective-cyclops)
 screen -2 -2 2 2
 pixels 500 500
 identity
@@ -25,6 +25,6 @@ rotate-x 10
 rotate-z 10
 rotate-y 30
 transform
-render-parallel
-file cube.ppm
+render-perspective-cyclops  0 0 3
+file cube1.ppm
 end
