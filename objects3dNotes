@@ -1,0 +1,49 @@
+completed comnands
+	pixels
+	screen
+	identity
+	transform
+	file
+	end 
+
+	line
+	rotate
+
+	renderparallel
+
+	-longer term to do
+		back face culling
+			make everything in triangle format
+			define and use normal vectors
+		-make a reverseMult for edge matrices
+
+		-makesphereanglestep depend on size
+	-done
+		-made triangle matrix
+		-chnage render function to work with with triangles	
+		-changefile check fromlines3d to object3d
+		-newnames - LRT,CST
+		-sphere=t and box-t
+	-short term to do
+		-debuging testing.
+
+-removed
+
+	for i in range(2):
+		if p1[i] < 0 or p2[i] < 0 or p1[i] > 499 or p2[i] > 499:
+			print "Point coordinate out of range of 0-499"
+			return
+
+			
+
+	x,y,z axis
+line -1 0 0 1 0 0  ##
+line 0 -1 0 0 1 0 
+line 0 0 -1 0 0 1 
+
+
+ETD9YA5EKKHG
+
+0.95.0515.10
+http://www.mangahere.co/manga/boku_girl/c001/40.html
+http://www.mangahere.co/manga/prunus_girl/v01/c001/11.html
