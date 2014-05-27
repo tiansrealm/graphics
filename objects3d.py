@@ -136,20 +136,23 @@ def main(argv=sys.argv):
 def renderParallel():
 	global color
 	color = WHITE
-	for triangle in GTR:
-		drawTriangle(triangle)
+	for triangleO in GTR:
+		if triangleO.inLineOfSight(0,0,55555):
+			drawTriangle(triangleO)
 def renderCyclops(ex,ey,ez, c = WHITE):
 	#one perspective triangles. requires eye's x,y,z for the one eye
 	global color
 	color = c
 	for triangleO in GTR:
-		vertexList = map(list, zip(*triangleO.matrix.list2d[:-1])) 
-		for i in range(len(vertexList)):
-			x,y,z = vertexList[i][0], vertexList[i][1], vertexList[i][2]
-			xNew = -ez*(x-ex)/(z-ez) + ex
-			yNew = -ez*(y-ey)/(z-ez) + ey
-			vertexList[i][0], vertexList[i][1] = xNew, yNew
-		drawTriangle(Triangle(*vertexList))
+		if triangleO.inLineOfSight(ex,ey,ez):
+			copyTriangle = Triangle(None,None,None,triangleO.matrix)
+			vertexList = map(list, zip(*triangleO.matrix.list2d[:-1])) 
+			for i in range(len(vertexList)):
+				x,y,z = vertexList[i][0], vertexList[i][1], vertexList[i][2]
+				xNew = -ez*(x-ex)/(z-ez) + ex
+				yNew = -ez*(y-ey)/(z-ez) + ey
+				copyTriangle.matrix.list2d[0][i], copyTriangle.matrix.list2d[1][i] = xNew, yNew
+			drawTriangle(copyTriangle)
 def renderStereo(lx,ly,lz,rx,ry,rz):
 	#two perspective lines. Left and right eye coords required
 	#uses red for left eye cyan for right for 3-d efffect
@@ -239,6 +242,7 @@ def box_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
 		box.rotateY(ry)
 	if rz != 0:
 		box.rotateZ(rz)
+	box.move(mx,my,mz)
 	box.transform(CST)
 	GTR.extend(box.triangleList)
 def sphere_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
@@ -251,6 +255,7 @@ def sphere_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
 		sphere.rotateY(ry)
 	if rz != 0:
 		sphere.rotateZ(rz)
+	sphere.move(mx,my,mz)
 	sphere.transform(CST)
 	GTR.extend(sphere.triangleList)
 def check(argv):

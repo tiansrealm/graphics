@@ -115,11 +115,11 @@ class MatrixShape(object):
 	def scale(self, sx,sy,sz):
 		self.transform(scaleMat(sx,sy,sz))
 	def rotateX(self, angle):
-		self.transform(rotateXMat(rx))
+		self.transform(rotateXMat(angle))
 	def rotateY(self, angle):
-		self.transform(rotateYMat(ry))
+		self.transform(rotateYMat(angle))
 	def rotateZ(self, angle):
-		self.transform(rotateZMat(rz))
+		self.transform(rotateZMat(angle))
 	def transform(self, transMatrixO):
 		for triangle in self.triangleList:
 			triangle.transform(transMatrixO)
@@ -151,7 +151,19 @@ class Triangle(MatrixShape):
 	
 	def transform(self, transMatrixO):
 		self.matrix = transMatrixO.mult(self.matrix)
-
+	#used for prespective graphics 3d
+	def inLineOfSight(self, ex,ey,ez):
+		m = self.matrix.list2d
+		v1 = [(m[i][1]-m[i][0]) for i in range(3)] #vector_p1p2
+		v2 = [(m[i][2]-m[i][1]) for i in range(3)] #vector_p2p3
+		sightVector = [m[0][0]-ex, m[0][1]-ey, m[0][2]-ez]
+		'''cross product
+		v1 X v2 = <v1y*v2z-v1z*v2y, v1z*v2x-v1x*v2z, v1x*v2y-v1y*v2x>
+		'''
+		normal = \
+			[(v1[1]*v2[2]-v1[2]*v2[1]), (v1[2]*v2[0]-v1[0]*v2[2]), (v1[0]*v2[1]-v1[1]*v2[0])]
+		dotProduct = sightVector[0]*normal[0]+sightVector[1]*normal[01]+sightVector[2]*normal[2]
+		return dotProduct < 0
 
 class Box(MatrixShape):
 	'''
@@ -165,16 +177,16 @@ class Box(MatrixShape):
 		c = [[-.5, .5, .5],[-.5,-.5, .5],[ .5,-.5, .5],[ .5, .5, .5],
 			 [-.5, .5,-.5],[-.5,-.5,-.5],[ .5,-.5,-.5],[ .5, .5,-.5]] #coordinates
 
-		combinations = [ [c[0],c[1],c[2]], [c[2],c[3],c[0]], [c[4],c[5],c[6]],
-						 [c[6],c[7],c[4]], [c[4],c[5],c[1]], [c[1],c[0],c[4]],
+		combinations = [ [c[0],c[1],c[2]], [c[2],c[3],c[0]], [c[7],c[6],c[5]],
+						 [c[5],c[4],c[7]], [c[4],c[5],c[1]], [c[1],c[0],c[4]],
 						 [c[3],c[2],c[6]], [c[6],c[7],c[3]], [c[4],c[0],c[3]],
-						 [c[3],c[7],c[4]], [c[5],c[1],c[2]], [c[2],c[6],c[5]] ]
+						 [c[3],c[7],c[4]], [c[1],c[5],c[6]], [c[6],c[2],c[1]] ]
 		self.triangleList = list(itertools.starmap(Triangle,combinations))
 		
 
 
 class Sphere(MatrixShape):
-	def __init__(self,angleStep = 15): # radius and center coords
+	def __init__(self,angleStep = 10): # radius and center coords
 		#first make unit sphere 
 		assert(angleStep >= 0 or angleStep <= 45 or 180%angleStep == 0)
 		pointsArray2d = [] # will be a 2-d matrix 
@@ -202,5 +214,5 @@ class Sphere(MatrixShape):
 				self.triangleList.append( Triangle(
 					pointsArray2d[i][j], pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1]))
 				self.triangleList.append( Triangle(
-					pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[i][j+1]))
+					pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[i][j+1], pointsArray2d[i][j]))
 
