@@ -19,20 +19,16 @@ completed comnands
 
 		-makesphereanglestep depend on size
 	-done
-		-made triangle matrix
-		-chnage render function to work with with triangles	
-		-changefile check fromlines3d to object3d
-		-newnames - LRT,CST
-		-sphere=t and box-t
-	-short term to do
-		-debuging testing.
-
+		massive changes
+		everything to objects
+		-matrix shapes 
+		-improved matrix multiplication
+	-to do
+		transMat and check all the moveMat,scaelematetc
+		update objects3d now
 -removed
 
-	for i in range(2):
-		if p1[i] < 0 or p2[i] < 0 or p1[i] > 499 or p2[i] > 499:
-			print "Point coordinate out of range of 0-499"
-			return
+
 
 			
 

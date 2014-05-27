@@ -1,177 +1,206 @@
-import math
+import math, itertools
 
 class Matrix(object):
 	
-	def __init__(self, row, col, list2d = None):
+	def __init__(self, list2d, numRow = None, numCol = None):
 		if list2d != None:
-			self.row = len(list2d)
-			self.col = len(list2d[0])
-			self.mat = list2d
+			self.numRow = len(list2d)
+			self.numCol= len(list2d[0])
+			self.list2d = list2d
 		else:
-			self.row = row
-			self.col = col
-			self.mat = [ [0]*col for i in range(row)]
-			if row == col:
+			self.numRow = numRow
+			self.numCol = numCol
+			self.list2d = [ [0]*numCol for i in range(numRow)]
+			if numRow == numCol:
 				self.identity()
 	def set(self, row , col, value):
-		if (row <= self.row and col <= self.col):
-			self.mat[row][col] = value
+		if (row <= self.numRow and col <= self.numCol):
+			self.list2d[row][col] = value
 		else:
-			print "warning: attepmt to get a out of bound value in a Matrix"
+			print "warning: attepmt to set in a out of bound location in a Matrix"
 
-	def get(self, row , col):
-		if (row <= self.row and col <= self.col):
-			return self.mat[row][col]
+	def getValue(self, row , col):
+		if (row <= self.numRow and col <= self.numCol):
+			return self.list2d[row][col]
 		else:
 			print "warning: attepmt to get a out of bound value in a Matrix"
 	def identity(self):
-		if(self.row != self.col):
-			print "not a square matrix for identity()"
-		else:
-			for i in range(self.row):
-				self.set(i,i,1)	
+		assert(self.numRow == self.numCol), "not a square matrix for identity()"
+		for i in range(self.numRow):
+			self.set(i,i,1)	
+	def addRow(self, newRow):
+		if len(newRow) > self.numCol:
+			raise Exception("adding a row to matrix that is too large")
+		self.list2d.append(newRow)
+		self.numRow +=1
+	def addCol(self, newCol):
+		length = len(newCol)
+		if length > self.numRow:
+			raise Exception("adding a col to matrix that is too large")
+		for i in range(length):
+			self.list2d[i].extend(newCol[i]) 
 	def mult(self, other):
 		'''self(matrix) is multiplied by other and result is new matrix
-			the order is :   self.matrix * other
-		'''
-		assert(self.col == other.row), \
-			"invalid matrix dimension for multiplication {} x {}".format(self.col, other.row)
-		ans = Matrix(self.row, other.col)
+			the order is :   self * other
 
-		reversedOther = map(list, zip(*other.mat))
-		for row in range(self.row): 
-			for r2 in range(other.col): #col of other = row of reversedOther
-				s = 0;
-				for col in range(self.col): 
-					s += self.mat[row][col] * reversedOther[r2][col] 
-				ans.set(row,r2, s)
-		return ans
-	def reverseMult(self, reversedOther):
-		'''unique multiplacation process
-			the other matrix's row and col are swapped
-			-for the reversed treat col as row and row as col when apply matrix logic
-			-ultimately,we want the multiplication to 
-			 apply on the second matrix as if it wasn't reversed.
-			 Lastly reverse the answer matrix
 		'''
-		assert(self.col == reversedOther.col), \
-			"invalid matrix dimension for reverse multiplication \
-				 self.col x reversedOther.col = {} x {}".format(self.col, reversedOther.col)
-		ans = Matrix(self.row, reversedOther.row)
-
-		for row in range(self.row): 
-			for r2 in range(reversedOther.row): 
+		assert(self.numCol == other.numRow), \
+		"invalid matrix dimension for multiplication {} x {}".format(self.numCol, other.numRow)
+		
+		ans = []
+		for row in range(self.numRow): 
+			currentRow = []
+			for c2 in range(other.numCol):
 				s = 0;
-				for col in range(self.col): 
-					s += self.mat[row][col] * reversedOther.get(r2,col) 
-				ans.set(row,r2, s)
-		return ans.reverse()
-		
-	def reverse(self): 
-		self.mat = map(list, zip(*self.mat))
-		self.row, self.col = self.col, self.row
-		return self
-		
+				for col in range(self.numCol):
+					s += self.list2d[row][col] * other.list2d[col][c2] 
+				currentRow.append(s)
+			ans.append(currentRow)
+		return Matrix(ans)
+
 	def __str__(self):
 		s = ""
-		for row in self.mat:
+		for row in self.list2d:
 			s += str(row) + "\n"
 		return s
-	#note: zip(*matrix) returns same matrix with rows and cols swapped
+	#note: map(list,zip(*matrix)) returns same matrix with rows and cols swapped
 	'''
 	[ [1, 2, 3],		[ [1, 4, 7],
   	  [4, 5, 6],   =>     [2, 5, 8],
   	  [7, 8, 9] ]		  [3, 6, 9] ]
   	'''
 
-class TransMatrix(Matrix):
-	"""
-	4 by 4 matrix used to transformation another
-	matrix(with 4 rows) through matrix multiplication 
-	"""
-	def __init__(self):
-		super(TransMatrix, self).__init__(4, 4)	
-
-class EdgeMatrix(Matrix):
-	"""EdgeMatrix
-	This matrix is actually a veritcal version.
-	Three columns with infinite many rows
-	Plus a forth colum filled with 1's
-	Starts with zero rows. 
-
-	#SHOULD USE matrix reverseMult method for multiplication
-	"""
-	def __init__(self, sourceMat = None):
-		if sourceMat:
-			self.mat = sourceMat.mat
-			self.row = sourceMat.row
-			self.col = sourceMat.col
-		else:
-			super(EdgeMatrix, self).__init__(0, 4)
-class LineEdgeMatrix(EdgeMatrix):
-	'''
-	Each row is a point
-	Every two rows represent a line
-	'''
-	def __init__(self, sourceMat = None):
-		super(LineEdgeMatrix, self).init__(sourceMat)	
-
-	def addLine(self,x1,y1,z1,x2,y2,z2):
-		self.mat.append([x1,y1,z1,1])
-		self.mat.append([x2,y2,z2,1])
-		self.row += 2
-class TriangleEdgeMatrix(EdgeMatrix):
-	'''
-	Each row is a point
-	Every three rows represent a line
-	'''
-	def __init__(self, sourceMat = None):
-		super(TriangleEdgeMatrix, self).__init__(sourceMat)
-
-	def addTriangle(self,x1,y1,z1,x2,y2,z2,x3,y3,z3):
-		self.mat.append([x1,y1,z1,1])
-		self.mat.append([x2,y2,z2,1])
-		self.mat.append([x3,y3,3,1])
-		self.row += 3
-
-#transformation functions returns a matrixs that you can use to multiply
+#functions that generates transformation matrixs that you can use to multiply with
 def moveMat(x,y,z):
-	tempMat = TransMatrix()
-	tempMat.set(0,3, x) #could've just typed in the matrix
-	tempMat.set(1,3, y)
-	tempMat.set(2,3, z)
-	return tempMat
+	return Matrix([ [1, 0, 0, x],
+					[0, 1, 0, y],
+					[0, 0, 1, z],
+					[0, 0, 0, 1] ])
 def scaleMat(x,y,z):
-	tempMat = TransMatrix()
-	tempMat.set(0,0, x)
-	tempMat.set(1,1, y)
-	tempMat.set(2,2, z)
-	return tempMat
+	return Matrix([ [x, 0, 0, 0],
+					[0, y, 0, 0],
+					[0, 0, z, 0],
+					[0, 0, 0, 1] ])
 def rotateXMat(angle):
-	tempMat = TransMatrix()
 	rad = math.radians(angle)
 	cos, sin = math.cos(rad), math.sin(rad)
-	tempMat.set(1,1, cos)
-	tempMat.set(1,2, -sin)
-	tempMat.set(2,1, sin)
-	tempMat.set(2,2, cos)
-	return tempMat
+	return Matrix([ [1,   0,    0, 0],
+					[0, cos, -sin, 0],
+					[0, sin,  cos, 0],
+					[0,   0,    0, 1] ])
 
 def rotateYMat(angle):
-	tempMat = TransMatrix()
 	rad = math.radians(angle)
 	cos, sin = math.cos(rad), math.sin(rad)
-	tempMat.set(0,0, cos)
-	tempMat.set(0,2, sin)
-	tempMat.set(2,0, -sin)
-	tempMat.set(2,2, cos)
-	return tempMat
-def rotateZMat(angle):	
-	tempMat = TransMatrix()
+	return Matrix([ [ cos, 0, sin, 0],
+					[   0, 1, 0  , 0],
+					[-sin, 0, cos, 0],
+					[   0, 0, 0  , 1] ])
+def rotateZMat(angle):
 	rad = math.radians(angle)
 	cos, sin = math.cos(rad), math.sin(rad)
-	tempMat.set(0,0, cos)
-	tempMat.set(0,1, -sin)
-	tempMat.set(1,0, sin)
-	tempMat.set(1,1, cos)
-	return tempMat
+	return Matrix([ [cos,-sin, 0, 0],
+					[sin, cos, 0, 0],
+					[  0,   0, 1, 0],
+					[  0,   0, 0, 1] ])
+
+
+#---------------SHAPES CLASSES---------------------
+#Uses Matrices
+class MatrixShape(object):
+	def __init__(self,triangleList):
+		self.triangleList = triangleList
+	def move(self, mx,my,mz):
+		self.transform(moveMat(mx,my,mz))
+	def scale(self, sx,sy,sz):
+		self.transform(scaleMat(sx,sy,sz))
+	def rotateX(self, angle):
+		self.transform(rotateXMat(rx))
+	def rotateY(self, angle):
+		self.transform(rotateYMat(ry))
+	def rotateZ(self, angle):
+		self.transform(rotateZMat(rz))
+	def transform(self, transMatrixO):
+		for triangle in self.triangleList:
+			triangle.transform(transMatrixO)
+
+class Point(MatrixShape): # not used
+	def __init__(self,x,y,z):
+		self.x, self.y, self.z = x, y, z
+	def transform(self, transMatrixO):
+		self.x, self.y, self.z = transMatrixO.mult(Matrix([[x,y,z,1]])).matrix[:-1]
+
+class Triangle(MatrixShape):
+	def __init__(self,p1,p2,p3,matrix = None):
+		'''
+		matrix should be 4x3 Matrix(object). Last row all 1s. each column represent a vertex.
+		taking vertices in counter-clockwise order is the front face of the triangle
+		x1 x2 x3
+		y1 y2 y3
+		z1 z2 z3
+		1  1  1
+		'''
+		if matrix == None:
+			temp = [[p1[0],p2[0],p3[0]],
+					[p1[1],p2[1],p3[1]],
+					[p1[2],p2[2],p3[2]], 
+					[    1,    1,    1]]
+			self.matrix  = Matrix(temp)
+		else:
+			self.matrix = matrix
+	
+	def transform(self, transMatrixO):
+		self.matrix = transMatrixO.mult(self.matrix)
+
+
+class Box(MatrixShape):
+	'''
+	the initialization of a box uses (also spheres)
+	9 parameters. scaling(sx,sy,sz),rotation(rx,ry,rz), and translation(mx,my,mz)
+	'''
+	def __init__(self):
+		#unit box
+		#vertices: in front counter closewise starting from top left corner
+				# then repeat for the back. total 8 vertices
+		c = [[-.5, .5, .5],[-.5,-.5, .5],[ .5,-.5, .5],[ .5, .5, .5],
+			 [-.5, .5,-.5],[-.5,-.5,-.5],[ .5,-.5,-.5],[ .5, .5,-.5]] #coordinates
+
+		combinations = [ [c[0],c[1],c[2]], [c[2],c[3],c[0]], [c[4],c[5],c[6]],
+						 [c[6],c[7],c[4]], [c[4],c[5],c[1]], [c[1],c[0],c[4]],
+						 [c[3],c[2],c[6]], [c[6],c[7],c[3]], [c[4],c[0],c[3]],
+						 [c[3],c[7],c[4]], [c[5],c[1],c[2]], [c[2],c[6],c[5]] ]
+		self.triangleList = list(itertools.starmap(Triangle,combinations))
+		
+
+
+class Sphere(MatrixShape):
+	def __init__(self,angleStep = 15): # radius and center coords
+		#first make unit sphere 
+		assert(angleStep >= 0 or angleStep <= 45 or 180%angleStep == 0)
+		pointsArray2d = [] # will be a 2-d matrix 
+		numRows = 360 / angleStep
+		numCols = 180/angleStep + 1
+			#making pointsArray2d
+		for i in range(numRows): #horizontal sweep
+			theta = i * angleStep
+			vertical = []
+			for j in range(numCols): #vertical sweep
+				phi = j * angleStep
+				radTheta = math.radians(theta)
+				radPhi = math.radians(phi)
+				x = math.sin(radPhi) * math.cos(radTheta)
+				y = math.sin(radPhi) * math.sin(radTheta)
+				z = math.cos(radPhi) 
+				vertical.append([x,y,z])
+				j+=1
+			pointsArray2d.append(vertical)
+			i+=1
+			#triangle  tessalation
+		self.triangleList = []
+		for i in range(numRows): 
+			for j in range(numCols-1):
+				self.triangleList.append( Triangle(
+					pointsArray2d[i][j], pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1]))
+				self.triangleList.append( Triangle(
+					pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[i][j+1]))
+

@@ -9,8 +9,8 @@ CYAN =  (0,127,127)
 pixelWorldSize = (500,500) #width, height
 screen = (-5,-5, 5,5,) #xleft  ybottom  xright  ytop: cartesiancoordinates
 
-GTR = TriangleEdgeMatrix() #global Triangles Repository. uses reverseMult
-CST = TransMatrix() #current transformation matrix. uses regular mult
+GTR = [] #global Triangles Repository. 
+CST = Matrix(None, 4,4) #current Coordinate-System Transformation Matrix. uses 4 x 4 matrix
 shapes = []
 def main(argv=sys.argv):
 	global color, rgbArray, screen, pixelWorldSize, CST, GTR
@@ -46,12 +46,12 @@ def main(argv=sys.argv):
 				if len(args) != 9:
 					print "require 9 floats: sx,sy,sz,rx,ry,rz,mx,my,mz"
 				else:
-					Box(*[float(x) for x in args])
+					box_t(*[float(x) for x in args])
 			elif command == "sphere-t":
 				if len(args) != 9:
 					print "require 9 floats: sx,sy,sz,rx,ry,rz,mx,my,mz"
 				else:
-					Sphere(*[float(x) for x in args])
+					sphere_t(*[float(x) for x in args])
 					'''
 			elif command == "line":
 				if len(args) != 6:
@@ -93,7 +93,8 @@ def main(argv=sys.argv):
 			elif command == "identity":
 				CST.identity()
 			elif command == "transform":
-				GTR = TriangleEdgeMatrix(CST.reverseMult(GTR))
+				for triangleO in GTR:
+					triangleO.transform(CST) 
 			#rendering=====The Quantizers
 			elif command == "render-parallel":
 				renderParallel()
@@ -135,45 +136,35 @@ def main(argv=sys.argv):
 def renderParallel():
 	global color
 	color = WHITE
-	m = GTR.mat
-	xyTriangles = [[r1[:-2],r2[:-2],r3[:-2]] for r1,r2,r3 in zip(m[::3],m[1::3],m[2::3])]
-	for triangle in xyTriangles:
-		#drawing triangle
+	for triangle in GTR:
 		drawTriangle(triangle)
 def renderCyclops(ex,ey,ez, c = WHITE):
 	#one perspective triangles. requires eye's x,y,z for the one eye
 	global color
 	color = c
-	m = GTR.mat
-	p1, p2, p3 = None, None
-	for point in m:
-		x,y,z = point[0], point[1], point[2]
-		xNew = -ez*(x-ex)/(z-ez) + ex
-		yNew = -ez*(y-ey)/(z-ez) + ey
-		if (p1 == None):
-			p1 = [xNew,yNew]
-		elif(p2 == None):
-			p2 = [xNew,yNew]
-		elif(p3 == None):
-			drawLine(*(p1+p2+p3))
-			p1 = p2 = p3 = None
-		else:
-			print "error in renderCyclops"
-			return
-		#xNew = -ez(x-ex)/(z-ez) + ex
-		#yNew = -ez(y-ey)/(z-ez) + ey
+	for triangleO in GTR:
+		vertexList = map(list, zip(*triangleO.matrix.list2d[:-1])) 
+		for i in range(len(vertexList)):
+			x,y,z = vertexList[i][0], vertexList[i][1], vertexList[i][2]
+			xNew = -ez*(x-ex)/(z-ez) + ex
+			yNew = -ez*(y-ey)/(z-ez) + ey
+			vertexList[i][0], vertexList[i][1] = xNew, yNew
+		drawTriangle(Triangle(*vertexList))
 def renderStereo(lx,ly,lz,rx,ry,rz):
 	#two perspective lines. Left and right eye coords required
 	#uses red for left eye cyan for right for 3-d efffect
 	renderCyclops(lx,ly,lz,RED)
 	renderCyclops(rx,ry,rz,CYAN)
-
-def drawTriangle(vertices):
-	drawLine(*(vertices[0]+vertices[1]))
-	drawLine(*(vertices[1]+vertices[2]))
-	drawLine(*(vertices[2]+vertices[0]))
+def drawTriangle(triangleO):
+	temp = triangleO.matrix.list2d
+	vertex1 = [temp[0][0], temp[1][0], temp[2][0]]
+	vertex2 = [temp[0][1], temp[1][1], temp[2][1]]
+	vertex3 = [temp[0][2], temp[1][2], temp[2][2]]
+	drawLine(vertex1, vertex2)
+	drawLine(vertex2, vertex3)
+	drawLine(vertex3, vertex1)
 #given args could be float or convertable to desired floats
-def drawLine(x1,y1,x2,y2):
+def drawLine(v1,v2): #2 vertices
 	global color, rgbArray
 	#scaling/transforming from catesian coordinates to pixel coordinates
 	xLeft, xRight, yBot, yTop = screen[0], screen[2], screen[1], screen[2]
@@ -182,11 +173,11 @@ def drawLine(x1,y1,x2,y2):
 		px = width * (x-xLeft)/(xRight-xLeft)
 		py = height * (y-yTop)/ (yBot - yTop)
 	'''
-	px1 = pixelWorldSize[0] * (float(x1)-xLeft) / (xRight - xLeft)
-	px2 = pixelWorldSize[0] * (float(x2)-xLeft) / (xRight - xLeft)
-	py1 = pixelWorldSize[1] * (float(y1)-yTop) / (yBot - yTop)
-	py2 = pixelWorldSize[1] * (float(y2)-yTop) / (yBot - yTop)
-	p1 = [px1,py1]
+	px1 = pixelWorldSize[0] * (float(v1[0])-xLeft) / (xRight - xLeft)
+	px2 = pixelWorldSize[0] * (float(v2[0])-xLeft) / (xRight - xLeft)
+	py1 = pixelWorldSize[1] * (float(v1[1])-yTop) / (yBot - yTop)
+	py2 = pixelWorldSize[1] * (float(v2[1])-yTop) / (yBot - yTop)
+	p1 = [px1,py1] #point 1
 	p2 = [px2,py2]
 	deltaX = abs(p1[0] - p2[0])
 	deltaY = abs(p1[1] - p2[1])
@@ -237,7 +228,31 @@ def is_cyanRedOverlap(color1, color2):
 				or (color1 == RED and color2 == CYAN)
 
 
-
+#=============================objects3d using traingle tessellation
+def box_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
+	box = Box()
+	#transformations
+	box.scale(sx,sy,sz)
+	if rx != 0:
+		box.rotateX(rx)
+	if ry != 0:
+		box.rotateY(ry)
+	if rz != 0:
+		box.rotateZ(rz)
+	box.transform(CST)
+	GTR.extend(box.triangleList)
+def sphere_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
+	sphere = Sphere()
+	#transformations
+	sphere.scale(sx,sy,sz)
+	if rx != 0:
+		sphere.rotateX(rx)
+	if ry != 0:
+		sphere.rotateY(ry)
+	if rz != 0:
+		sphere.rotateZ(rz)
+	sphere.transform(CST)
+	GTR.extend(sphere.triangleList)
 def check(argv):
 	if (len(argv) != 2):
 		print """
@@ -247,122 +262,6 @@ def check(argv):
 		"""
 	if (argv[1][-10:] != ".objects3d"):
 		print "require a filename.objects3d as the argument"
-
-def RectToTriangles(vList):
-	error = "error: need 4 xyz vertices facing counter clockwise for a rectangle"
-	if len(vList) != 4:
-		print error
-		return
-	triangles = [[vList[1],vList[2],vList[3]], [vList[2],vList[3],vList[1]]]
-	return triangles
-
-#---------------SHAPES CLASSES---------------------
-#Uses Natrices
-class MatrixShape(object):
-	#use TriangleEdgeMatrix class for meshMat only
-	def __init__(self,meshMat):
-		self.meshMat = meshMat
-	def move(self, mx,my,mz):
-		print self.meshMat.row,self.meshMat.col
-		self.meshMat = moveMat(mx,my,mz).reverseMult(self.meshMat)
-	def scale(self, sx,sy,sz):
-		self.meshMat = scaleMat(sx,sy,sz).reverseMult(self.meshMat)
-	def rotateX(self, angle):
-		self.meshMat = rotateXMat(rx).reverseMult(self.meshMat)
-	def rotateY(self, angle):
-		self.meshMat = rotateYMat(ry).reverseMult(self.meshMat)
-	def rotateZ(self, angle):
-		self.meshMat = rotateZMat(rz).reverseMult(self.meshMat)
-	def transform(self, transMat):
-		self.meshMat = transMat.reverseMult(self.meshMat)
-
-
-
-class Box(MatrixShape):
-	'''
-	the initialization of a box uses (also spheres)
-	9 parameters. scaling(sx,sy,sz),rotation(rx,ry,rz), and translation(mx,my,mz)
-	'''
-	def __init__(self,sx,sy,sz,rx,ry,rz,mx,my,mz):
-		#unit box
-		self.meshMat = TriangleEdgeMatrix()
-		#vertices: in front counter closewise starting from top left corner
-				# then repeat for the back. total 8 vertices
-		v1 = [-.5, .5, .5]
-		v2 = [-.5,-.5, .5]
-		v3 = [ .5,-.5, .5]
-		v4 = [ .5, .5, .5]
-		v5 = [-.5, .5,-.5]
-		v6 = [-.5,-.5,-.5]
-		v7 = [ .5,-.5,-.5]
-		v8 = [ .5, .5,-.5]
-		rectCombinations = [[v1,v2,v3,v4],[v5,v6,v7,v8], #front and backface
-							[v5,v6,v1,v2],[v8,v7,v3,v4],	#side faces
-							[v5,v1,v4,v8],[v6,v2,v3,v7]]#top and bottom
-		triangleCombinations = 	map(RectToTriangles,rectCombinations)
-		for triangleDou in triangleCombinations:
-			self.meshMat.addTriangle(*(triangleDou[0][0]+triangleDou[0][1]+triangleDou[0][2]))
-			self.meshMat.addTriangle(*(triangleDou[1][0]+triangleDou[1][1]+triangleDou[1][2]))
-		#transformations
-		self.scale(sx,sy,sz)
-		if rx != 0:
-			self.rotateX(rx)
-		if ry != 0:
-			self.rotateY(ry)
-		if rz != 0:
-			self.rotateZ(rz)
-		self.transform(CST)
-		shapes.append(self)
-		(GTR.mat).extend(self.meshMat.mat)
-
-class Sphere(MatrixShape):
-	def __init__(self,sx,sy,sz,rx,ry,rz,mx,my,mz,angleStep = 10): # radius and center coords
-		#first make unit sphere 
-		if (angleStep < 0 or angleStep > 45 or 180%angleStep != 0):
-			print "sphere error with angleStep"
-			return
-		nodes = [] # will be a 2-d matrix 
-		numRows = 360 / angleStep
-		numCols = 180/angleStep + 1
-			#making nodes
-		for i in range(numRows): #horizontal sweep
-			theta = i * angleStep
-			vertical = []
-			for j in range(numCols): #vertical sweep
-				phi = j * angleStep
-				radTheta = math.radians(theta)
-				radPhi = math.radians(phi)
-				x = math.sin(radPhi) * math.cos(radTheta)
-				y = math.sin(radPhi) * math.sin(radTheta)
-				z = math.cos(radPhi) 
-				vertical.append([x,y,z])
-				if not phi == 0:
-					a = vertical[j-1]+vertical[j]
-					if len(a) != 6:
-						print "error", a
-				j+=1
-			nodes.append(vertical)
-			i+=1
-		self.meshMat = TriangleEdgeMatrix()
-			#triangle  tessalation
-		for i in range(numRows): 
-			for j in range(numCols-1):
-				triangles = RectToTriangles( #counter-clockwise 
-					[nodes[i][j],nodes[(i+1)%numRows][j],nodes[(i+1)%numRows][j+1],nodes[i][j+1]])
-				self.meshMat.addTriangle(*(triangles[0][0]+triangles[0][1]+triangles[0][2]))
-				self.meshMat.addTriangle(*(triangles[0][0]+triangles[0][1]+triangles[0][2]))
-		#transformations
-		self.scale(sx,sy,sz)
-		if rx != 0:
-			self.rotateX(rx)
-		if ry != 0:
-			self.rotateY(ry)
-		if rz != 0:
-			self.rotateZ(rz)
-		self.move(mx,my,mz)
-		self.transform(CST)
-		shapes.append(self)
-		(GTR.mat).extend(self.meshMat.mat)
 
 
 
