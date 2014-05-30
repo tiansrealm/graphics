@@ -215,4 +215,4 @@ class Sphere(MatrixShape):
 					pointsArray2d[i][j], pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1]))
 				self.triangleList.append( Triangle(
 					pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[i][j+1], pointsArray2d[i][j]))
-
+		

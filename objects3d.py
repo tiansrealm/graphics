@@ -68,13 +68,13 @@ def main(argv=sys.argv):
 					angle = int(args[0])					
 					if command == "rotate-x":
 						tempMat = rotateXMat(angle)
-						CST = tempMat.mult(CST)
+						CST = CST.mult(tempMat)
 					elif command == "rotate-y":
 						tempMat = rotateYMat(angle)
-						CST = tempMat.mult(CST)
+						CST = CST.mult(tempMat)
 					elif command == "rotate-z":
 						tempMat = rotateZMat(angle)
-						CST = tempMat.mult(CST)
+						CST = CST.mult(tempMat)
 					else: 
 						print "unregonized rotate command:", command
 						return
@@ -83,13 +83,13 @@ def main(argv=sys.argv):
 					print "require 3 float argument (x,y,z) for scaling."
 				else:
 					tempMat = scaleMat(float(args[0]),float(args[1]),float(args[2]))
-					CST = tempMat.mult(CST)
+					CST = CST.mult(tempMat)
 			elif command == "move":
 				if len(args) != 3:
 					print "require 3 float argument (x,y,z) for translation."
 				else:
 					tempMat = moveMat(float(args[0]),float(args[1]),float(args[2]))
-					CST = tempMat.mult(CST)
+					CST = CST.mult(tempMat)
 			elif command == "identity":
 				CST.identity()
 			elif command == "transform":
@@ -170,7 +170,7 @@ def drawTriangle(triangleO):
 def drawLine(v1,v2): #2 vertices
 	global color, rgbArray
 	#scaling/transforming from catesian coordinates to pixel coordinates
-	xLeft, xRight, yBot, yTop = screen[0], screen[2], screen[1], screen[2]
+	xLeft, yBot, xRight, yTop = screen[0], screen[1], screen[2], screen[3]
 	'''
 		assuming pxLeft and pyTop are zero
 		px = width * (x-xLeft)/(xRight-xLeft)
@@ -185,10 +185,10 @@ def drawLine(v1,v2): #2 vertices
 	deltaX = abs(p1[0] - p2[0])
 	deltaY = abs(p1[1] - p2[1])
 	reversedXY = False
-	for i in range(2):
-		if p1[i] < 0 or p2[i] < 0 or p1[i] > 499 or p2[i] > 499:
-			print "Point coordinate out of range of 0-499"
-			return
+	if px1 < 0 or px2 < 0 or px1 > pixelWorldSize[0] or px2 > pixelWorldSize[0] \
+		or py1 < 0 or py2 < 0 or py1 > pixelWorldSize[1] or py2 > pixelWorldSize[1]:
+		print "Point coordinate out of range of 0-499"
+		return
 	if(p1 == p2):
 		return
 	if deltaX < deltaY: # shorter x difference
