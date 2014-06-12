@@ -183,6 +183,9 @@ class Box(MatrixShape):
 						 [c[3],c[7],c[4]], [c[1],c[5],c[6]], [c[6],c[2],c[1]] ]
 		self.triangleList = list(itertools.starmap(Triangle,combinations))
 		
+		#test edge  stick out on one side.
+		#self.triangleList.append(Triangle([-.5, .5, .5], [ .5, .5, .5], [ .5, 1.5, .5]))
+		#self.triangleList.append(Triangle([ .5, .5, .5],[-.5, .5, .5], [ .5, 1.5, .5]))
 
 
 class Sphere(MatrixShape):
@@ -190,13 +193,13 @@ class Sphere(MatrixShape):
 		#first make unit sphere 
 		assert(angleStep >= 0 or angleStep <= 45 or 180%angleStep == 0)
 		pointsArray2d = [] # will be a 2-d matrix 
-		numRows = 360 / angleStep
-		numCols = 180/angleStep + 1
+		numRows = 360 / angleStep  #not inlcuding 360, since have 0
+		numCols = 180/angleStep + 1 #include 180
 			#making pointsArray2d
-		for i in range(numRows): #horizontal sweep
-			theta = i * angleStep
+		for i in range(numRows): #z rotation(counterclockwise)
+			theta = i * angleStep 
 			vertical = []
-			for j in range(numCols): #vertical sweep
+			for j in range(numCols): #y rotation(counterclockwise)
 				phi = j * angleStep
 				radTheta = math.radians(theta)
 				radPhi = math.radians(phi)
@@ -212,7 +215,7 @@ class Sphere(MatrixShape):
 		for i in range(numRows): 
 			for j in range(numCols-1):
 				self.triangleList.append( Triangle(
-					pointsArray2d[i][j], pointsArray2d[(i+1)%numRows][j], pointsArray2d[(i+1)%numRows][j+1]))
+					pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[(i+1)%numRows][j], pointsArray2d[i][j]))
 				self.triangleList.append( Triangle(
-					pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[i][j+1], pointsArray2d[i][j]))
+					pointsArray2d[i][j], pointsArray2d[i][j+1], pointsArray2d[(i+1)%numRows][j+1]))
 		
