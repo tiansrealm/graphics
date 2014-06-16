@@ -108,18 +108,37 @@ def rotateZMat(angle):
 #---------------SHAPES CLASSES---------------------
 #Uses Matrices
 class MatrixShape(object):
-	def __init__(self,triangleList):
+	def __init__(self,triangleList = None):
 		self.triangleList = triangleList
+		self.cx, self.cy, self.cz = 0, 0, 0 #center coords
 	def move(self, mx,my,mz):
 		self.transform(moveMat(mx,my,mz))
+		self.cx += mx
+		self.cy += my
+		self.cz += mz
 	def scale(self, sx,sy,sz):
 		self.transform(scaleMat(sx,sy,sz))
-	def rotateX(self, angle):
+	def rotateX(self, angle, ox = 0, oy = 0, oz = 0):
+		notAroundOrigin = (ox != 0 or oy != 0  or oz != 0)
+		if notAroundOrigin:
+			self.move(-ox,-oy,-oz)
 		self.transform(rotateXMat(angle))
-	def rotateY(self, angle):
+		if notAroundOrigin:
+			self.move(ox, oy, oz)
+	def rotateY(self, angle, ox = 0, oy = 0, oz = 0):
+		notAroundOrigin = ox != 0 or oy != 0  or oz != 0
+		if notAroundOrigin:
+			self.move(-ox,-oy,-oz)
 		self.transform(rotateYMat(angle))
-	def rotateZ(self, angle):
+		if notAroundOrigin:
+			self.move(ox, oy, oz)
+	def rotateZ(self, angle, ox = 0, oy = 0, oz = 0):
+		notAroundOrigin = ox != 0 or oy != 0  or oz != 0
+		if notAroundOrigin:
+			self.move(-ox,-oy,-oz)
 		self.transform(rotateZMat(angle))
+		if notAroundOrigin:
+			self.move(ox, oy, oz)
 	def transform(self, transMatrixO):
 		for triangle in self.triangleList:
 			triangle.transform(transMatrixO)
@@ -130,47 +149,13 @@ class Point(MatrixShape): # not used
 	def transform(self, transMatrixO):
 		self.x, self.y, self.z = transMatrixO.mult(Matrix([[x,y,z,1]])).matrix[:-1]
 
-class Triangle(MatrixShape):
-	def __init__(self,p1,p2,p3,matrix = None):
-		'''
-		matrix should be 4x3 Matrix(object). Last row all 1s. each column represent a vertex.
-		taking vertices in counter-clockwise order is the front face of the triangle
-		x1 x2 x3
-		y1 y2 y3
-		z1 z2 z3
-		1  1  1
-		'''
-		if matrix == None:
-			temp = [[p1[0],p2[0],p3[0]],
-					[p1[1],p2[1],p3[1]],
-					[p1[2],p2[2],p3[2]], 
-					[    1,    1,    1]]
-			self.matrix  = Matrix(temp)
-		else:
-			self.matrix = matrix
-	
-	def transform(self, transMatrixO):
-		self.matrix = transMatrixO.mult(self.matrix)
-	#used for prespective graphics 3d
-	def inLineOfSight(self, ex,ey,ez):
-		m = self.matrix.list2d
-		v1 = [(m[i][1]-m[i][0]) for i in range(3)] #vector_p1p2
-		v2 = [(m[i][2]-m[i][1]) for i in range(3)] #vector_p2p3
-		sightVector = [m[0][0]-ex, m[0][1]-ey, m[0][2]-ez]
-		'''cross product
-		v1 X v2 = <v1y*v2z-v1z*v2y, v1z*v2x-v1x*v2z, v1x*v2y-v1y*v2x>
-		'''
-		normal = \
-			[(v1[1]*v2[2]-v1[2]*v2[1]), (v1[2]*v2[0]-v1[0]*v2[2]), (v1[0]*v2[1]-v1[1]*v2[0])]
-		dotProduct = sightVector[0]*normal[0]+sightVector[1]*normal[01]+sightVector[2]*normal[2]
-		return dotProduct < 0
-
 class Box(MatrixShape):
 	'''
 	the initialization of a box uses (also spheres)
 	9 parameters. scaling(sx,sy,sz),rotation(rx,ry,rz), and translation(mx,my,mz)
 	'''
 	def __init__(self):
+		super(Box, self).__init__()
 		#unit box
 		#vertices: in front counter closewise starting from top left corner
 				# then repeat for the back. total 8 vertices
@@ -189,7 +174,8 @@ class Box(MatrixShape):
 
 
 class Sphere(MatrixShape):
-	def __init__(self,angleStep = 10): # radius and center coords
+	def __init__(self,angleStep = 10):
+		super(Sphere, self).__init__()
 		#first make unit sphere 
 		assert(angleStep >= 0 or angleStep <= 45 or 180%angleStep == 0)
 		pointsArray2d = [] # will be a 2-d matrix 
@@ -218,4 +204,44 @@ class Sphere(MatrixShape):
 					pointsArray2d[(i+1)%numRows][j+1], pointsArray2d[(i+1)%numRows][j], pointsArray2d[i][j]))
 				self.triangleList.append( Triangle(
 					pointsArray2d[i][j], pointsArray2d[i][j+1], pointsArray2d[(i+1)%numRows][j+1]))
+
+
+
+
+class Triangle(MatrixShape):
+	def __init__(self,p1,p2,p3,matrix = None):
+		'''
+		matrix should be 4x3 Matrix(object). Last row all 1s. each column represent a vertex.
+		taking vertices in counter-clockwise order is the front face of the triangle
+		x1 x2 x3
+		y1 y2 y3
+		z1 z2 z3
+		1  1  1
+		'''
+		if matrix == None:
+			temp = [[p1[0],p2[0],p3[0]],
+					[p1[1],p2[1],p3[1]],
+					[p1[2],p2[2],p3[2]], 
+					[    1,    1,    1]]
+			self.matrix  = Matrix(temp)
+		else:
+			self.matrix = matrix
+		self.normal = None
+		
+	def transform(self, transMatrixO):
+		self.matrix = transMatrixO.mult(self.matrix)
+	#used for prespective graphics 3d
+	def inLineOfSight(self, ex,ey,ez):
+		m = self.matrix.list2d
+		sightVector = [m[0][0]-ex, m[0][1]-ey, m[0][2]-ez]
+		if not self.normal:
+			v1 = [(m[i][1]-m[i][0]) for i in range(3)] #vector_p1p2
+			v2 = [(m[i][2]-m[i][1]) for i in range(3)] #vector_p2p3
+			'''cross product
+			v1 X v2 = <v1y*v2z-v1z*v2y, v1z*v2x-v1x*v2z, v1x*v2y-v1y*v2x>
+			'''
+			self.normal = \
+				[(v1[1]*v2[2]-v1[2]*v2[1]), (v1[2]*v2[0]-v1[0]*v2[2]), (v1[0]*v2[1]-v1[1]*v2[0])]
+		dotProduct = sightVector[0]*self.normal[0]+sightVector[1]*self.normal[1]+sightVector[2]*self.normal[2]
+		return dotProduct < 0
 		
