@@ -103,6 +103,9 @@ def rotateZMat(angle):
 					[sin, cos, 0, 0],
 					[  0,   0, 1, 0],
 					[  0,   0, 0, 1] ])
+def linearMatrix(x,y,z):
+	#return a 4 x 1 matrix 
+	return Matrix([ [x], [y], [z], [1] ])
 
 
 #---------------SHAPES CLASSES---------------------
@@ -227,9 +230,11 @@ class Triangle(MatrixShape):
 		else:
 			self.matrix = matrix
 		self.normal = None
-		
+
 	def transform(self, transMatrixO):
 		self.matrix = transMatrixO.mult(self.matrix)
+		if(self.normal):
+			self.normal = transMatrixO.mult(self.normal)
 	#used for prespective graphics 3d
 	def inLineOfSight(self, ex,ey,ez):
 		m = self.matrix.list2d
@@ -240,8 +245,10 @@ class Triangle(MatrixShape):
 			'''cross product
 			v1 X v2 = <v1y*v2z-v1z*v2y, v1z*v2x-v1x*v2z, v1x*v2y-v1y*v2x>
 			'''
-			self.normal = \
-				[(v1[1]*v2[2]-v1[2]*v2[1]), (v1[2]*v2[0]-v1[0]*v2[2]), (v1[0]*v2[1]-v1[1]*v2[0])]
-		dotProduct = sightVector[0]*self.normal[0]+sightVector[1]*self.normal[1]+sightVector[2]*self.normal[2]
+			self.normal = linearMatrix(
+					(v1[1]*v2[2]-v1[2]*v2[1]), (v1[2]*v2[0]-v1[0]*v2[2]), (v1[0]*v2[1]-v1[1]*v2[0]))
+		nList = self.normal.list2d
+		nx, ny, nz =  nList[0][0], nList[1][0], nList[2][0]
+		dotProduct = sightVector[0]*nx+sightVector[1]*ny+sightVector[2]*nz
 		return dotProduct < 0
 		

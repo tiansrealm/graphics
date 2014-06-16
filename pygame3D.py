@@ -27,46 +27,11 @@ WorldRGBArray = pygame.PixelArray(WorldSurf)
 def main():
 	global color, WorldRGBArray, screen, pixelWorldSize, CST, GTR, FPSCLOCK
 	FPSCLOCK = pygame.time.Clock()
-	sphereA = sphere_t(1,1,1,0,0,0,1,0,0) 
-	LJFile = open("lumberJack.obj","r")
-    
-	LJVertexList = []
-	LJNormalList = []
-	LJTriangleList = []
-	for LJTextLine in LJFile:
-    	#handle comments
-		commentIndex = LJTextLine.find("#")
-		if (commentIndex != -1):
-			LJTextLine = LJTextLine[:commentIndex]
-		#
-		LJTextLine = LJTextLine.split()
-		if LJTextLine:
-			command = LJTextLine[0]
-			args = LJTextLine[1:]
-			if command == "v":
-				#print len(args)
-				args = map(float,args)
-				LJVertexList.append(args)
-			elif command == "vn":
-				args = map(float,args)
-				LJNormalList.append(args)
-			elif command == "f":
-				vertices = []
-				normals = []
-				for section in args:
-					values = map(int, section.split('/'))
-					vertices.append(LJVertexList[values[0]-1])
-					normals.append(LJNormalList[values[2]-1])
-				if len(vertices) == 3:
-					t1 = Triangle(vertices[0], vertices[1], vertices[2])
-					t1.normal = normals[0]
-					LJTriangleList.append(t1)
-				if len(vertices) == 4:
-					t2 = Triangle(vertices[2], vertices[3], vertices[0])
-					t2.normal = normals[2]
-					LJTriangleList.append(t2)
-	LJShape = MatrixShape(LJTriangleList)
-	GTR.extend(LJShape.triangleList)
+	#sphereA = sphere_t(1,1,1,0,0,0,1,0,0) 
+	personShape = importShape("lumberJack.obj")
+	personShape.rotateZ(90)
+	personShape.scale(3,3,3)
+	#carShape = importShape
 	while(True):
     	#event loop
  		for event in pygame.event.get():
@@ -74,8 +39,10 @@ def main():
  				pygame.quit()
  				sys.exit()
 		#game loop
-		sphereA.rotateX(5, sphereA.cx,sphereA.cy,sphereA.cz)
+		#sphereA.rotateX(5, sphereA.cx,sphereA.cy,sphereA.cz)
 		#sphereA.rotateY(5, sphereA.cx,sphereA.cy,sphereA.cz)
+		personShape.rotateX(5)
+
 		#display
 		renderParallel()
 		tempWorldSurf = WorldRGBArray.make_surface()
@@ -140,7 +107,7 @@ def drawLine(v1,v2): #2 vertices
 	reversedXY = False
 	if px1 < 0 or px2 < 0 or px1 > pixelWorldSize[0] or px2 > pixelWorldSize[0] \
 		or py1 < 0 or py2 < 0 or py1 > pixelWorldSize[1] or py2 > pixelWorldSize[1]:
-		print "Point coordinate out of range of 0-499"
+		print "Point coordinate out of range"
 		return
 	if(p1 == p2):
 		return
@@ -213,17 +180,75 @@ def sphere_t(sx,sy,sz,rx,ry,rz,mx,my,mz):
 	sphere.transform(CST)
 	GTR.extend(sphere.triangleList)
 	return sphere
-def check(argv):
-	if (len(argv) != 2):
-		print """
-		provide 1 argument
-		objects3d.py filename.objects3d
-		will translate a filename.objects3d file to a .ppm file 
-		"""
-	if (argv[1][-10:] != ".objects3d"):
-		print "require a filename.objects3d as the argument"
 
 
 
+
+
+def importShape(filename):
+	fread = open(filename,"r")
+	vertexList = []
+	normalList = []
+	triangleList = []
+	for textLine in fread:
+    	#handle comments
+		commentIndex = textLine.find("#")
+		if (commentIndex != -1):
+			textLine = textLine[:commentIndex]
+		#
+		textLine = textLine.split()
+		if textLine:
+			command = textLine[0]
+			args = textLine[1:]
+			if command == "v":
+				#print len(args)
+				args = map(float,args)
+				vertexList.append(args)
+	fread = open(filename,"r")
+	for textLine in fread:
+    	#handle comments
+		commentIndex = textLine.find("#")
+		if (commentIndex != -1):
+			textLine = textLine[:commentIndex]
+		#
+		textLine = textLine.split()
+		if textLine:
+			command = textLine[0]
+			args = textLine[1:]
+			if command == "vn":
+				args = map(float,args)
+				normalList.append(args)
+	fread = open(filename,"r")
+	for textLine in fread:
+    	#handle comments
+		commentIndex = textLine.find("#")
+		if (commentIndex != -1):
+			textLine = textLine[:commentIndex]
+		#
+		textLine = textLine.split()
+		if textLine:
+			command = textLine[0]
+			args = textLine[1:]
+			if command == "f":
+				vertices = []
+				normals = []
+				for section in args:
+					values = map(int, section.split('/'))
+					for i in range(len(values)):
+						if values[i] > 0:
+							values[i] -= 1
+					vertices.append(vertexList[values[0]])
+					normals.append(normalList[values[2]])
+				if len(vertices) == 3:
+					t1 = Triangle(vertices[0], vertices[1], vertices[2])
+					t1.normal = linearMatrix(*normals[0])
+					triangleList.append(t1)
+				if len(vertices) == 4:
+					t2 = Triangle(vertices[2], vertices[3], vertices[0])
+					t2.normal = linearMatrix(*normals[2])
+					triangleList.append(t2)
+	shape = MatrixShape(triangleList)
+	GTR.extend(shape.triangleList)
+	return shape
 if __name__ == "__main__":
 	main()
